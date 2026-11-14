@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR Scanner & Generator</title>
+<style>
+  :root{--bg:#0b0f1a;--card:#141b2d;--accent:#3b82f6;--text:#e8edf7;--muted:#8a96b2;--line:#1f2a44}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding-bottom:76px}
+  header{padding:14px 16px 8px;position:sticky;top:0;background:var(--bg);z-index:5}
+  h1{font-size:20px} h1 span{color:var(--accent)}
+  .tabs{display:flex;gap:8px;margin-top:10px}
+  .tab{flex:1;padding:10px;text-align:center;border-radius:12px;background:var(--card);color:var(--muted);border:1px solid var(--line);font-size:14px;cursor:pointer}
+  .tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  main{padding:8px 16px}
+  .panel{display:none} .panel.on{display:block}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0}
+  #reader{width:100%;border-radius:12px;overflow:hidden;background:#000;min-height:40px}
+  button.b{width:100%;padding:12px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;margin-top:10px;cursor:pointer}
+  button.b.alt{background:#1c2742}
+  button.b.red{background:#ef4444}
+  .two{display:flex;gap:8px}
+  .two button{flex:1}
+  input,select,textarea{width:100%;padding:12px;margin-top:8px;border-radius:10px;border:1px solid var(--line);background:#0e1424;color:var(--text);font-size:15px;font-family:inherit}
+  label{font-size:13px;color:var(--muted);display:block;margin-top:10px}
+  .result{word-break:break-word;font-size:16px;line-height:1.5;white-space:pre-wrap}
+  .muted{color:var(--muted);font-size:13px}
+  #qrbox{display:flex;justify-content:center;padding:14px;background:#fff;border-radius:12px;margin-top:12px}
+  #qrbox:empty{display:none}
+  .hi{padding:12px 0;border-bottom:1px solid var(--line)}
+  .hi .t{word-break:break-word;font-size:15px}
+  .hi .d{font-size:12px;color:var(--muted);margin-top:4px}
+  #banner{position:fixed;bottom:0;left:0;right:0;height:56px;background:#1c2742;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:13px;border-top:1px solid #2a3860;z-index:10}
+  #inter{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:20;gap:16px;padding:20px}
+  #inter .ad{width:100%;max-width:320px;height:250px;background:#1c2742;border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--muted);text-align:center}
+  #inter button{padding:10px 22px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:15px}
+  #inter button:disabled{background:#334}
+  #toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);background:#fff;color:#000;padding:8px 16px;border-radius:20px;font-size:14px;opacity:0;transition:.3s;z-index:30;pointer-events:none}
+  #toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>📷 QR <span>Scanner</span> & Generator</h1>
+  <div class="tabs">
+    <div class="tab on" data-t="scan">Scan</div>
+    <div class="tab" data-t="gen">Generate</div>
+    <div class="tab" data-t="hist">History</div>
+  </div>
+</header>
+
+<main>
+  <!-- SCAN -->
+  <section class="panel on" id="p-scan">
+    <div class="card">
+      <div id="reader"></div>
+      <button class="b" id="startBtn">Camera chalu karo</button>
+      <button class="b red" id="stopBtn" style="display:none">Camera band karo</button>
+      <button class="b alt" id="fileBtn">Gallery se QR image chuno</button>
+      <input type="file" id="fileIn" accept="image/*" style="display:none">
+      <p class="muted" style="margin-top:10px" id="scanMsg"></p>
+    </div>
+    <div class="card" id="resCard" style="display:none">
+      <div class="muted">Result</div>
+      <div class="result" id="resText"></div>
+      <div class="two">
+        <button class="b alt" id="rCopy">Copy</button>
+        <button class="b" id="rOpen" style="display:none">Link kholo</button>
+      </div>
+      <button class="b alt" id="rShare">Share</button>
+    </div>
+  </section>
+
+  <!-- GENERATE -->
+  <section class="panel" id="p-gen">
+    <div class="card">
+      <label>Type</label>
+      <select id="gType">
+        <option value="text">Text / Link</option>
+        <option value="wifi">WiFi</option>
+        <option value="phone">Phone number</option>
+        <option value="email">Email</option>
+      </select>
+      <div id="gFields"></div>
+      <button class="b" id="gBtn">QR banao</button>
+      <div id="qrbox"></div>
+      <div class="two" id="gActs" style="display:none">
+        <button class="b alt" id="gDown">Save (PNG)</button>
+        <button class="b alt" id="gShare">Share</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="panel" id="p-hist">
+    <div class="card">
+      <div id="hList"></div>
+      <button class="b alt" id="hClear">History saaf karo</button>
+    </div>
+  </section>
+</main>
+
+<div id="banner">📢 Banner Ad (AdMob yahan aayega)</div>
+<div id="inter">
+  <div class="ad">Interstitial Ad<br>(AdMob yahan aayega)</div>
+  <button id="closeAd" disabled>Close</button>
+</div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const isUrl = s => /^https?:\/\/\S+$/i.test(s);
+let scanner = null, scanning = false, lastResult = "", actions = 0;
+let history = [];
+try { history = JSON.parse(localStorage.getItem("qrhist") || "[]"); } catch(e) {}
+const saveHist = () => { try { localStorage.setItem("qrhist", JSON.stringify(history.slice(0,30))); } catch(e) {} };
+
+function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1600); }
+
+/* ---- ads placeholder: har 5 kaam ke baad ---- */
+function counted(){ actions++; if(actions % 5 === 0) showInter(); }
+function showInter(){
+  const o=$("inter"), b=$("closeAd"); let s=3;
+  o.style.display="flex"; b.disabled=true; b.textContent="Close in "+s;
+  const iv=setInterval(()=>{ s--; if(s<=0){clearInterval(iv); b.disabled=false; b.textContent="Close";} else b.textContent="Close in "+s; },1000);
+}
+$("closeAd").onclick=()=>{ $("inter").style.display="none"; };
+
+/* ---- tabs ---- */
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===t));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("on",p.id==="p-"+t.dataset.t));
+  if(t.dataset.t!=="scan") stopScan();
+  if(t.dataset.t==="hist") renderHist();
+});
+
+/* ---- scanning ---- */
+function libOk(){
+  if(typeof Html5Qrcode==="undefined"){ $("scanMsg").textContent="Scanner library load nahi hui. Internet check karo aur page dobara kholo."; return false; }
+  return true;
+}
+function onResult(text){
+  lastResult = text;
+  $("resText").textContent = text;
+  $("rOpen").style.display = isUrl(text) ? "block" : "none";
+  $("resCard").style.display = "block";
+  history.unshift({text, type:"Scan", ts:Date.now()}); saveHist();
+  if (navigator.vibrate) navigator.vibrate(80);
+  counted();
+}
+async function startScan(){
+  if(!libOk()) return;
+  $("scanMsg").textContent = "";
+  try{
+    scanner = scanner || new Html5Qrcode("reader");
+    await scanner.start({facingMode:"environment"}, {fps:10, qrbox:{width:230,height:230}},
+      txt => { onResult(txt); stopScan(); }, () => {});
+    scanning = true;
+    $("startBtn").style.display="none"; $("stopBtn").style.display="block";
+  }catch(e){
+    $("scanMsg").textContent = "Camera nahi khul paya. Camera permission do (aur page HTTPS ya localhost par ho).";
+  }
+}
+async function stopScan(){
+  if(scanner && scanning){ try{ await scanner.stop(); }catch(e){} }
+  scanning = false;
+  $("startBtn").style.display="block"; $("stopBtn").style.display="none";
+}
+$("startBtn").onclick = startScan;
+$("stopBtn").onclick = stopScan;
+$("fileBtn").onclick = () => $("fileIn").click();
+$("fileIn").onchange = async e => {
+  const f = e.target.files[0]; if(!f || !libOk()) return;
+  try{
+    const h = new Html5Qrcode("reader");
+    const txt = await h.scanFile(f, true);
+    onResult(txt);
+  }catch(err){ $("scanMsg").textContent = "Is image mein QR nahi mila."; }
+  e.target.value = "";
+};
+$("rCopy").onclick = async () => {
+  try{ await navigator.clipboard.writeText(lastResult); }
+  catch(e){ const a=document.createElement("textarea"); a.value=lastResult; document.body.appendChild(a); a.select(); document.execCommand("copy"); a.remove(); }
+  toast("Copy ho gaya!");
+};
+$("rOpen").onclick = () => window.open(lastResult, "_blank", "noopener");
+$("rShare").onclick = () => doShare({text:lastResult});
+
+async function doShare(data){
+  if(navigator.share){ try{ await navigator.share(data); return; }catch(e){ return; } }
+  toast("Is phone par share support nahi hai");
+}
+
+/* ---- generate ---- */
+const FIELDS = {
+  text:  [["v","Text ya link likho","textarea"]],
+  wifi:  [["ssid","WiFi ka naam","input"],["pass","Password","input"],["sec","Security","sel"]],
+  phone: [["v","Phone number (jaise +9779812345678)","input"]],
+  email: [["to","Email address","input"],["sub","Subject (optional)","input"],["msg","Message (optional)","textarea"]]
+};
+function drawFields(){
+  const k = $("gType").value;
+  $("gFields").innerHTML = FIELDS[k].map(([id,label,kind]) => {
+    if(kind==="sel") return `<label>${label}</label><select id="f_${id}"><option>WPA</option><option>WEP</option><option value="nopass">Koi nahi</option></select>`;
+    if(kind==="textarea") return `<label>${label}</label><textarea id="f_${id}" rows="3"></textarea>`;
+    return `<label>${label}</label><input id="f_${id}">`;
+  }).join("");
+}
+$("gType").onchange = drawFields; drawFields();
+
+const esc = s => s.replace(/([\\;,:"])/g, "\\$1");
+function buildPayload(){
+  const k = $("gType").value, g = id => ($("f_"+id)||{}).value || "";
+  if(k==="text")  return g("v").trim();
+  if(k==="phone") return g("v").trim() ? "tel:"+g("v").trim() : "";
+  if(k==="wifi"){
+    if(!g("ssid").trim()) return "";
+    const sec = g("sec");
+    return `WIFI:T:${sec};S:${esc(g("ssid"))};${sec==="nopass"?"":"P:"+esc(g("pass"))+";"};`;
+  }
+  if(k==="email"){
+    if(!g("to").trim()) return "";
+    const q = [];
+    if(g("sub")) q.push("subject="+encodeURIComponent(g("sub")));
+    if(g("msg")) q.push("body="+encodeURIComponent(g("msg")));
+    return "mailto:"+g("to").trim()+(q.length?"?"+q.join("&"):"");
+  }
+}
+$("gBtn").onclick = () => {
+  if(typeof QRCode==="undefined"){ toast("QR library load nahi hui. Internet check karo."); return; }
+  const payload = buildPayload();
+  if(!payload){ toast("Pehle details bharo"); return; }
+  const box = $("qrbox"); box.innerHTML = "";
+  new QRCode(box, {text:payload, width:240, height:240, correctLevel:QRCode.CorrectLevel.M});
+  $("gActs").style.display = "flex";
+  history.unshift({text:payload, type:"Generate", ts:Date.now()}); saveHist();
+  counted();
+};
+function qrDataUrl(){
+  const c = $("qrbox").querySelector("canvas");
+  if(c) return c.toDataURL("image/png");
+  const i = $("qrbox").querySelector("img"); return i ? i.src : "";
+}
+$("gDown").onclick = () => {
+  const u = qrDataUrl(); if(!u) return;
+  const a = document.createElement("a"); a.href = u; a.download = "qr-code.png";
+  document.body.appendChild(a); a.click(); a.remove(); toast("Save ho raha hai...");
+};
+$("gShare").onclick = async () => {
+  const u = qrDataUrl(); if(!u) return;
+  try{
+    const blob = await (await fetch(u)).blob();
+    const file = new File([blob], "qr-code.png", {type:"image/png"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); return; }
+  }catch(e){}
+  doShare({text: buildPayload()});
+};
+
+/* ---- history ---- */
+function renderHist(){
+  const l = $("hList");
+  if(!history.length){ l.innerHTML = '<p class="muted">Abhi koi history nahi hai.</p>'; return; }
+  l.innerHTML = "";
+  history.slice(0,30).forEach(h => {
+    const d = document.createElement("div"); d.className="hi";
+    const t = document.createElement("div"); t.className="t"; t.textContent = h.text;
+    const m = document.createElement("div"); m.className="d";
+    m.textContent = h.type + " • " + new Date(h.ts).toLocaleString();
+    d.append(t,m); l.appendChild(d);
+  });
+}
+$("hClear").onclick = () => { history = []; saveHist(); renderHist(); toast("Saaf ho gaya"); };
+renderHist();
+</script>
+</body>
+</html>
